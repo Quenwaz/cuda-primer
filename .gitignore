@@ -4,3 +4,10 @@
 *.ptx
 *.cubin
 *.fatbin
+
+
+
+/out
+/build
+*.exe
+*.json
