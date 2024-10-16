@@ -7,6 +7,7 @@ __global__ void vector_add(const float* A, const float* B, float* C, int N) {
     if (i < N) {
         C[i] = A[i] + B[i];
     }
+    printf("blockid=%d, threadperblock=%d, tid = %d\n", blockIdx.x, blockDim.x, threadIdx.x);
 }
 
 int main() {

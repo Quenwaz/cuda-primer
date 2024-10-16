@@ -6,9 +6,10 @@ cmake_minimum_required(VERSION 3.26)
 find_package(CUDA REQUIRED)
 
 # 添加 CUDA 文件
-add_executable(helloworld main.cu)
+add_executable(shared_memory shared_memory.cu)
 
-target_compile_options(helloworld PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
+
+target_compile_options(shared_memory PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
                        -G
                        -g, -0
                        --generate-line-info
@@ -17,4 +18,4 @@ target_compile_options(helloworld PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
                        >)
 
 # 设置 CUDA 计算能力（可选）
-set_target_properties(helloworld PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+set_target_properties(shared_memory PROPERTIES CUDA_SEPARABLE_COMPILATION ON)

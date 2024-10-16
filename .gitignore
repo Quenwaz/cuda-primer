@@ -6,7 +6,7 @@
 *.fatbin
 
 
-
+/.vs
 /out
 /build
 *.exe
