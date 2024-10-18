@@ -3,6 +3,7 @@
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 #include <thrust/extrema.h>
+#include <omp.h>    
 #include "fps.hpp"
 #include <random>
 
@@ -129,7 +130,7 @@ __global__ void computeDistances(Point* points, int numPoints, int* sampledIndic
 
 
 // 主机函数：执行FPS
-std::vector<int> farthestPointSampling(const std::vector<Point>& points, int numSamples) {
+std::vector<size_t> farthestPointSampling(const std::vector<Point>& points, int numSamples) {
     int numPoints = points.size();
 
     // 分配设备内存
@@ -166,12 +167,41 @@ std::vector<int> farthestPointSampling(const std::vector<Point>& points, int num
     }
 
     // 将结果复制回主机
-    std::vector<int> sampledIndices(numSamples);
+    std::vector<size_t> sampledIndices(numSamples);
     thrust::copy(d_sampledIndices.begin(), d_sampledIndices.end(), sampledIndices.begin());
 
     return sampledIndices;
 }
 
+
+std::vector<size_t> fps_divide_and_conquer(const std::vector<Point>& points, int numSamples)
+{
+    const auto divide_times = int(std::pow(2, std::round(std::log2(numSamples / 1024))));
+    const auto divide_point_size = points.size() / divide_times;
+    const auto subsample = numSamples / divide_times;
+    std::vector<std::vector<Point>> dvide_points;
+    dvide_points.resize(divide_times);
+    size_t i = 0;
+    for (; i < (divide_times - 1); i++)
+    {
+        dvide_points.at(i).insert(dvide_points.at(i).end(),
+            points.begin() + (i * divide_point_size), points.begin() + ((i + 1) * divide_point_size)
+        );
+    }
+    dvide_points.back().insert(dvide_points.back().end(), points.begin() + (i * divide_point_size), points.end());
+
+    std::vector<size_t> final_result;
+    omp_set_num_threads(divide_times);
+#pragma omp parallel
+    {
+        auto local_result = farthestPointSampling(dvide_points.at(omp_get_thread_num()), subsample);
+#pragma omp critical
+        {
+            final_result.insert(final_result.end(), local_result.begin(), local_result.end());
+        }
+    }
+    return final_result;
+}
 
 
 

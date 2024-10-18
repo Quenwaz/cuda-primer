@@ -5,6 +5,7 @@
 #include <string>
 #include <windows.h>
 #include "fps.hpp"
+#include <chrono>
 
 #undef max
 #undef min
@@ -206,12 +207,14 @@ std::vector<Point> readLASFile(const std::string& filename) {
 }
 
 
-void bounding(const std::vector<Point>& points, double& minx, double& maxx, double &miny, double &maxy)
+void bounding(const std::vector<Point>& points, double& minx, double& maxx, double &miny, double &maxy, double& minz, double& maxz)
 {
     minx = std::numeric_limits<double>::max();
     maxx = std::numeric_limits<double>::min();
     miny = std::numeric_limits<double>::max();
     maxy = std::numeric_limits<double>::min();
+    minz = std::numeric_limits<double>::max();
+    maxz = std::numeric_limits<double>::min();
 
     for (auto& pt : points)
     {
@@ -230,22 +233,40 @@ void bounding(const std::vector<Point>& points, double& minx, double& maxx, doub
         if (pt.y > maxy) {
             maxy = pt.y;
         }
+
+        if (pt.z < minz) {
+            minz = pt.z;
+        }
+
+        if (pt.z > maxz) {
+            maxz = pt.z;
+        }
     }
 }
 
-void normalization(std::vector<Point>& points)
+void normalization(std::vector<Point>& points, bool _to_0_1 = false)
 {
     double minx = 0
         , maxx = 0
         , miny = 0
-        , maxy = 0;
+        , maxy = 0
+        , minz = 0
+        , maxz = 0;
 
-    bounding(points, minx, maxx, miny, maxy);
+    bounding(points, minx, maxx, miny, maxy, minz, maxz);
 
     for (auto& pt : points)
     {
-        pt.x = pt.x - minx;
-        pt.y = pt.y - miny;
+        if (!_to_0_1) {
+            pt.x = pt.x - minx;
+            pt.y = pt.y - miny;
+            pt.z = pt.z - minz;
+        }
+        else {
+            pt.x = 1 / pt.x;
+            pt.y = 1 / pt.y;
+            pt.z = 1 / pt.z;
+        }
     }
 
 }
@@ -292,8 +313,30 @@ void pcdlist_to_pointlist(const std::vector<PCDData>& pcds, std::vector<Point>& 
         });
 }
 
+#include <omp.h>    
+
+
 
 int main() {
+    //float sum = 0;
+    //std::vector<int> arrs{ 0,1,2,3,4,5,6,7 };
+    //omp_set_num_threads(2);
+    //#pragma omp parallel
+    //{
+    //    int local_sum = 0;
+    //    #pragma omp for schedule(static)
+    //    for (int i = 0; i < arrs.size(); i++) {
+    //        local_sum += arrs[i];
+    //        fprintf(stderr, "%d %d\n", omp_get_thread_num(), i);
+    //    }
+    //    #pragma omp critical
+    //    {
+    //        sum += local_sum;
+
+    //    }
+    //}
+    //fprintf(stderr, "sum=%f\n", sum);
+
     //std::vector<Point> points(10240);
     //std::random_device rd;
     //std::mt19937 gen(rd());
@@ -311,14 +354,16 @@ int main() {
 
     std::vector<Point> points;
     pcdlist_to_pointlist(pcds, points);
-    normalization(points);
-    int numSamples = 4096;
+    int numSamples = 2048;
 
     //std::string filename = R"(E:\DevDatas\pointcloud\changshaceshiL2.las)";
     //readLasfileWithMMP(filename, points);
 
+    normalization(points, true);
     // Ö´ÐÐFPS
-    std::vector<size_t> sampledIndices = farthestPointSamplingV2(points, numSamples);
+    auto start = std::chrono::steady_clock::now();
+    std::vector<size_t> sampledIndices = fps_divide_and_conquer(points, numSamples);
+    fprintf(stderr, "elapsed %d seconds\n", std::chrono::duration_cast<std::chrono::seconds>((std::chrono::steady_clock::now() - start)).count());
 
     dump_to_ascii("test.txt", pcds, sampledIndices);
 

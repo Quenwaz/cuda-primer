@@ -10,6 +10,8 @@ struct Point {
 
 
 std::vector<size_t> farthestPointSamplingV2(const std::vector<Point>& points, int numSamples);
+std::vector<size_t> farthestPointSampling(const std::vector<Point>& points, int numSamples);
+std::vector<size_t> fps_divide_and_conquer(const std::vector<Point>& points, int numSamples);
 
 void print_cuda_info();
 
